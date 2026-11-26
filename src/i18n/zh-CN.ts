@@ -95,7 +95,6 @@ export const zhCN = {
   'home.colUpdated': '最近更新',
   'home.colActions': '操作',
   'home.noDescription': '暂无描述',
-  'home.githubTitle': '在 GitHub 查看项目源码',
   'home.nameLabel': '项目名称 *',
   'home.namePlaceholder': '例如：夏季宣传海报',
   'home.descriptionLabel': '项目描述',

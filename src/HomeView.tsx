@@ -218,12 +218,6 @@ export function HomeView({ projects, loading, onOpen, onCreate, onDelete, onDupl
           </section>
         )}
 
-        <footer className="home-footer">
-          <a className="github-link" href="https://github.com/newljs/Layerive" target="_blank" rel="noreferrer" title={t('home.githubTitle')}>
-            <Icon name="github" size={14} />
-            GitHub · aaaaalan
-          </a>
-        </footer>
       </section>
 
       <input ref={importRef} hidden type="file" accept=".zip" onChange={(event) => {

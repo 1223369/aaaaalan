@@ -8,11 +8,11 @@
 
 **把反复改图的过程，留在自己的电脑里。**
 
-[![aaaaalan 功能演示](docs/assets/layerive-overview.gif)](https://cdn.jsdelivr.net/gh/newljs/Layerive@e187a44f3198749d3f32ed8b88049c727a14e9ba/docs/%E6%BC%94%E7%A4%BA%E8%A7%86%E9%A2%91.mp4)
+![aaaaalan 功能演示](docs/assets/layerive-overview.gif)
 
 **1 分钟功能演示** — 创建项目、文生图、局部修改、图片改字、提取素材、参考图替换、批量生图、版本管理、图片对比和提示词画廊。
 
-[▶ 播放完整演示视频（MP4，约 5 MB）](https://cdn.jsdelivr.net/gh/newljs/Layerive@e187a44f3198749d3f32ed8b88049c727a14e9ba/docs/%E6%BC%94%E7%A4%BA%E8%A7%86%E9%A2%91.mp4)
+[▶ 播放本地完整演示视频（MP4）](docs/演示视频.mp4)
 
 aaaaalan 把需要反复修改的图片工作放进同一个本地项目。你可以从提示词或已有图片开始，继续改图、改字、局部替换、扩图和提取素材；每次结果都会成为一个版本，可随时回看、前后对比，或从旧结果继续分支，而不是让图片和提示词散落在不同对话里。
 
@@ -128,8 +128,8 @@ npm start      # 启动本地服务，同时托管前端与 API
 安装并启动 Docker 后，首次运行：
 
 ```bash
-git clone https://github.com/newljs/Layerive.git
-cd Layerive
+# 将项目文件上传到服务器后进入项目目录
+cd aaaaalan
 docker compose up -d --build
 ```
 
@@ -177,7 +177,7 @@ npm run desktop:dist  # 生成安装包与便携版
 
 桌面版会在系统的 aaaaalan 用户数据目录保存 SQLite 数据库、项目图片、画廊和模型配置；程序升级不会覆盖这些数据。浏览器本地版与桌面版使用相同功能代码，但默认各自保存本地数据；可通过完整备份 / 恢复迁移项目。
 
-也可以直接从 [GitHub Releases](https://github.com/newljs/Layerive/releases) 下载预构建安装包：推送 `v*` tag 后 GitHub Actions 会自动发布 Windows（安装包 + 便携版）、macOS（x64 + arm64 DMG）和 Linux（AppImage + deb）产物。
+如需桌面安装包，请使用你自己的发布渠道构建和分发。
 
 ## 界面流程
 
@@ -276,17 +276,6 @@ npm run build  # 类型检查并打包前端
 npm run test:local-edit  # 局部编辑回归测试
 npm start      # 启动生产模式本地服务
 ```
-
-## Star History
-
-<a href="https://star-history.com/#newljs/Layerive&Date">
-
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=newljs/Layerive&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=newljs/Layerive&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=newljs/Layerive&type=Date" />
- </picture>
-</a>
 
 ---
 

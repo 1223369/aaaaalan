@@ -97,7 +97,6 @@ export const enUS: Record<TranslationKey, DictValue> = {
   'home.colUpdated': 'Last updated',
   'home.colActions': 'Actions',
   'home.noDescription': 'No description',
-  'home.githubTitle': 'View the source on GitHub',
   'home.nameLabel': 'Project name *',
   'home.namePlaceholder': 'e.g. Summer campaign poster',
   'home.descriptionLabel': 'Description',

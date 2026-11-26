@@ -8,11 +8,11 @@
 
 **A local image-creation workspace for work that grows beyond a single prompt.**
 
-[![aaaaalan product tour](docs/assets/layerive-overview.gif)](https://cdn.jsdelivr.net/gh/newljs/Layerive@e187a44f3198749d3f32ed8b88049c727a14e9ba/docs/%E6%BC%94%E7%A4%BA%E8%A7%86%E9%A2%91.mp4)
+![aaaaalan product tour](docs/assets/layerive-overview.gif)
 
 **1-minute product tour** — projects, text-to-image, regional editing, text editing, asset extraction, reference-image replacement, batch generation, version history, comparison, and the prompt gallery.
 
-[▶ Watch the full demo video (MP4, about 5 MB)](https://cdn.jsdelivr.net/gh/newljs/Layerive@e187a44f3198749d3f32ed8b88049c727a14e9ba/docs/%E6%BC%94%E7%A4%BA%E8%A7%86%E9%A2%91.mp4)
+[▶ Watch the local full demo video (MP4)](docs/演示视频.mp4)
 
 aaaaalan keeps iterative image work in one local project. Start from a prompt or an existing image, then refine it: change text, replace a region, outpaint, or extract an asset. Every result becomes a version you can revisit, compare, or branch from—rather than another file or prompt lost in a chat history.
 
@@ -128,8 +128,8 @@ npm start      # Serve the frontend and local API
 Install and start Docker, then run these commands for the first launch:
 
 ```bash
-git clone https://github.com/newljs/Layerive.git
-cd Layerive
+# Upload the project files to the server, then enter the project directory
+cd aaaaalan
 docker compose up -d --build
 ```
 
@@ -177,7 +177,7 @@ npm run desktop:dist  # Create installer and portable packages
 
 The desktop app stores its SQLite database, project images, gallery, and model configuration in the operating system's aaaaalan user-data directory, which is not replaced during application upgrades. The browser-local and desktop modes share feature code but keep separate local data by default; use full backup and restore to migrate projects.
 
-Prebuilt installers are also published automatically to [GitHub Releases](https://github.com/newljs/Layerive/releases) by GitHub Actions whenever a `v*` tag is pushed — Windows (installer + portable), macOS (x64 + arm64 DMG), and Linux (AppImage + deb).
+Build and distribute desktop installers through your own release channel when needed.
 
 ## Workflow
 
@@ -276,16 +276,6 @@ npm run build  # Type-check and build the frontend
 npm run test:local-edit  # Run regional-edit regression tests
 npm start      # Start the local production service
 ```
-
-## Star History
-
-<a href="https://star-history.com/#newljs/Layerive&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=newljs/Layerive&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=newljs/Layerive&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=newljs/Layerive&type=Date" />
- </picture>
-</a>
 
 ---
 
