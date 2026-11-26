@@ -1,0 +1,102 @@
+{
+  "name": "aaaaalan",
+  "version": "0.1.9",
+  "description": "aaaaalan, a local-first AI image creation workspace",
+  "license": "LGPL-3.0-or-later",
+  "author": {
+    "name": "newljs",
+    "email": "a@liujunsheng.com"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "icons": "node scripts/make-icons.mjs",
+    "prebuild": "npm run icons",
+    "build": "node node_modules/typescript/bin/tsc --noEmit && node node_modules/vite/bin/vite.js build",
+    "start": "node server/index.mjs",
+    "lint": "node node_modules/typescript/bin/tsc --noEmit",
+    "test:local-edit": "node --test server/local-edit.test.mjs",
+    "test:generate": "node --test server/generation.test.mjs",
+    "test:request-guard": "node --test server/request-guard.test.mjs",
+    "test": "node --test \"server/*.test.mjs\"",
+    "desktop:dev": "npm run build && electron .",
+    "desktop:dir": "npm run build && electron-builder --dir",
+    "desktop:dist": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "sharp": "0.35.4"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "electron": "44.2.0",
+    "electron-builder": "26.15.3",
+    "typescript": "5.9.3",
+    "vite": "8.3.0"
+  },
+  "type": "module",
+  "main": "electron/main.cjs",
+  "build": {
+    "appId": "com.aaaaalan.desktop",
+    "productName": "aaaaalan",
+    "icon": "public/icons/icon-512.png",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "dist",
+        "to": "app/dist"
+      },
+      {
+        "from": "server",
+        "to": "app/server",
+        "filter": [
+          "**/*",
+          "!**/*.test.mjs"
+        ]
+      },
+      {
+        "from": "node_modules",
+        "to": "app/node_modules",
+        "filter": [
+          "sharp/**/*",
+          "@img/**/*",
+          "detect-libc/**/*",
+          "semver/**/*"
+        ]
+      }
+    ],
+    "win": {
+      "icon": "public/icons/icon.ico",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Graphics"
+    }
+  }
+}

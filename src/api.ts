@@ -1,0 +1,143 @@
+import { imagePluginForOperation } from './plugins/catalog';
+import type { ImagePluginManifest } from './types';
+import { tf } from './i18n';
+import type { BatchEditProgress, BatchEditResult, CleanupMode, ExtractionMode, FusionMode, GenerateResult, GenerationTask, GalleryEntryItem, LocalEditReference, ModelConfig, ModelExecutionLog, ModelsPayload, Project, ProjectBundle, ProjectImage, TextSegment } from './types';
+
+export class ApiError extends Error {
+  constructor(message: string, public readonly status: number, public readonly code?: string) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+async function request<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, {
+    ...init,
+    headers: init?.body ? { 'Content-Type': 'application/json', ...init.headers } : init?.headers,
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const status = response.status;
+    const serverText: string = payload.error || tf('api.requestFailed', '请求失败', { status });
+    // 服务端错误码化后按 err.<code> 取词；字典缺码时回退服务端原文（含旧版纯文本）。
+    throw new ApiError(payload.code ? tf(`err.${payload.code}`, serverText, payload.params) : serverText, status, payload.code);
+  }
+  return payload as T;
+}
+
+async function readFileAsBase64(file: File) {
+  const dataUrl = await readFileAsDataUrl(file);
+  return dataUrl.replace(/^data:[^;]+;base64,/, '');
+}
+
+function downloadFile(url: string) {
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = '';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+}
+
+function runImagePlugin(id: string, pluginId: string, input: Record<string, unknown>) {
+  return request<GenerateResult>('/api/projects/' + encodeURIComponent(id) + '/plugins/' + encodeURIComponent(pluginId) + '/run', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export const api = {
+  authStatus: () => request<{ authenticated: boolean }>('/api/auth/status'),
+  login: (input: { username: string; password: string }) => request<{ authenticated: boolean }>('/api/auth/login', { method: 'POST', body: JSON.stringify(input) }),
+  logout: () => request<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),
+  imagePlugins: () => request<{ plugins: ImagePluginManifest[]; errors?: { directory: string; message: string }[] }>('/api/plugins'),
+  runImagePlugin,
+  listProjects: () => request<{ projects: Project[] }>('/api/projects'),
+  createProject: (input: { name: string; description?: string; defaultModelId?: string }) =>
+    request<ProjectBundle>('/api/projects', { method: 'POST', body: JSON.stringify(input) }),
+  getProject: (id: string) => request<ProjectBundle>(`/api/projects/${id}`),
+  updateProject: (id: string, input: Record<string, unknown>) =>
+    request<ProjectBundle>(`/api/projects/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
+  deleteProject: (id: string) => request<{ ok: boolean }>(`/api/projects/${id}`, { method: 'DELETE' }),
+  duplicateProject: (id: string) => request<ProjectBundle>(`/api/projects/${id}/duplicate`, { method: 'POST' }),
+  exportProject: (id: string) => downloadFile(`/api/projects/${id}/export`),
+  importProject: async (file: File) => {
+    const data = await readFileAsBase64(file);
+    return request<ProjectBundle>('/api/projects/import', { method: 'POST', body: JSON.stringify({ data }) });
+  },
+  downloadBackup: () => downloadFile('/api/backup'),
+  restoreBackup: async (file: File) => {
+    const data = await readFileAsBase64(file);
+    return request<{ ok: boolean; restartRequired: boolean; safetyBackup: string }>('/api/backup/restore', { method: 'POST', body: JSON.stringify({ data }) });
+  },
+  deleteVersion: (projectId: string, versionId: string, force = false) =>
+    request<ProjectBundle>(`/api/projects/${projectId}/versions/${versionId}${force ? '?force=1' : ''}`, { method: 'DELETE' }),
+  downloadVersionImages: (projectId: string, versionId: string) =>
+    downloadFile(`/api/projects/${projectId}/versions/${versionId}/download`),
+  generate: (id: string, input: Record<string, unknown>) =>
+    request<GenerateResult>(`/api/projects/${id}/generate`, { method: 'POST', body: JSON.stringify(input) }),
+  startBatchEdit: (id: string, input: { imageId: string; modelId: string; parentVersionId?: string | null; template?: string; quantity?: number; variables?: Array<{ name: string; values: string[] }>; prompts?: string[]; params?: Record<string, unknown> }) =>
+    request<BatchEditResult>(`/api/projects/${id}/batch-edit`, { method: 'POST', body: JSON.stringify(input) }),
+  startBatchGenerate: (id: string, input: { modelId: string; parentVersionId?: string | null; template?: string; quantity?: number; variables?: Array<{ name: string; values: string[] }>; prompts?: string[]; stylePrompt?: string; params?: Record<string, unknown> }) =>
+    request<BatchEditResult>(`/api/projects/${id}/batch-generate`, { method: 'POST', body: JSON.stringify(input) }),
+  getBatchEdit: (id: string, taskId: string) => request<BatchEditProgress>(`/api/projects/${id}/batch-edits/${taskId}`),
+  listGeneratingTasks: (id: string) => request<{ tasks: GenerationTask[] }>(`/api/projects/${id}/tasks`),
+  modelLogs: (id: string, limit = 100) => request<{ logs: ModelExecutionLog[] }>(`/api/projects/${id}/model-logs?limit=${limit}`),
+  getTask: (id: string, taskId: string) => request<GenerationTask>(`/api/projects/${id}/tasks/${taskId}`),
+  cancelTask: (id: string, taskId: string) => request<{ ok: boolean; status: string }>(`/api/projects/${id}/tasks/${taskId}/cancel`, { method: 'POST' }),
+  recognizeText: (id: string, imageId: string, visionModelId?: string) =>
+    request<{ segments: TextSegment[]; modelName: string; cached: boolean }>(`/api/projects/${id}/recognize-text`, { method: 'POST', body: JSON.stringify({ imageId, visionModelId }) }),
+  editText: (id: string, input: { imageId: string; modelId: string; visionModelId?: string; parentVersionId?: string | null; segments: TextSegment[]; params?: Record<string, unknown> }) =>
+    runImagePlugin(id, imagePluginForOperation('edit_text').id, input),
+  fusion: (id: string, input: { imageId: string; referenceImageId: string; modelId: string; visionModelId?: string; mode: FusionMode; point: { x: number; y: number }; instruction?: string; params?: Record<string, unknown> }) =>
+    runImagePlugin(id, imagePluginForOperation('fusion').id, input),
+  localEdit: (id: string, input: { imageId: string; modelId: string; visionModelId?: string; parentVersionId?: string | null; instruction: string; reference?: LocalEditReference; rect: { x: number; y: number; width: number; height: number }; params?: Record<string, unknown> }) =>
+    runImagePlugin(id, imagePluginForOperation('local_edit').id, input),
+  removeElement: (id: string, input: { imageId: string; modelId: string; visionModelId?: string; parentVersionId?: string | null; mode?: CleanupMode; rect?: { x: number; y: number; width: number; height: number }; instruction?: string; keepPoints?: Array<{ x: number; y: number }>; params?: Record<string, unknown> }) =>
+    runImagePlugin(id, imagePluginForOperation('remove_element').id, input),
+  localEditBatch: (id: string, input: { imageId: string; modelId: string; visionModelId?: string; parentVersionId?: string | null; rect: { x: number; y: number; width: number; height: number }; instructions: string[]; reference?: LocalEditReference; params?: Record<string, unknown> }) =>
+    request<BatchEditResult>(`/api/projects/${id}/local-edit-batch`, { method: 'POST', body: JSON.stringify(input) }),
+  outpaint: (id: string, input: { imageId: string; modelId: string; parentVersionId?: string | null; size: string; params?: Record<string, unknown> }) =>
+    runImagePlugin(id, imagePluginForOperation('outpaint').id, input),
+  enhance: (id: string, input: { imageId: string; modelId: string; parentVersionId?: string | null; params?: Record<string, unknown> }) =>
+    runImagePlugin(id, imagePluginForOperation('enhance').id, input),
+  removeWatermark: (id: string, input: { imageId: string; modelId: string; visionModelId?: string; parentVersionId?: string | null; params?: Record<string, unknown> }) =>
+    runImagePlugin(id, imagePluginForOperation('remove_watermark').id, input),
+  removeBackground: (id: string, input: { imageId: string; modelId: string; visionModelId?: string; parentVersionId?: string | null; params?: Record<string, unknown> }) =>
+    runImagePlugin(id, imagePluginForOperation('remove_background').id, input),
+  extractAsset: (id: string, input: { imageId: string; modelId: string; visionModelId?: string; parentVersionId?: string | null; rect: { x: number; y: number; width: number; height: number }; crop: { data: string; mimeType: string; padded?: boolean }; mode?: ExtractionMode; hint?: string; params?: Record<string, unknown> }) =>
+    runImagePlugin(id, imagePluginForOperation('extract_asset').id, input),
+  uploadImage: (id: string, input: { data: string; mimeType: string; name: string; referenceOnly?: boolean }) =>
+    request<ProjectBundle>(`/api/projects/${id}/images`, { method: 'POST', body: JSON.stringify(input) }),
+  gallery: () => request<{ entries: GalleryEntryItem[] }>('/api/gallery'),
+  saveGalleryEntry: (input: { id?: string; title: string; category: string; prompt: string; stylePrompt: string; image?: { data: string; mimeType: string } | null }) =>
+    request<{ entry: GalleryEntryItem }>(`/api/gallery`, { method: 'POST', body: JSON.stringify(input) }),
+  updateGalleryEntry: (id: string, input: { title?: string; category?: string; prompt?: string; stylePrompt?: string; image?: { data: string; mimeType: string } | null }) =>
+    request<{ entry: GalleryEntryItem }>(`/api/gallery/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
+  deleteGalleryEntry: (id: string) => request<{ ok: boolean }>(`/api/gallery/${id}`, { method: 'DELETE' }),
+  analyzeGalleryImage: (input: { data: string; mimeType: string; visionModelId?: string }) =>
+    request<{ title: string; prompt: string; stylePrompt: string }>('/api/gallery/analyze', { method: 'POST', body: JSON.stringify(input) }),
+  addGalleryFromProject: (input: { projectId: string; imageId: string; visionModelId?: string }) =>
+    request<{ entry: GalleryEntryItem }>('/api/gallery/from-image', { method: 'POST', body: JSON.stringify(input) }),
+  models: () => request<ModelsPayload>('/api/models'),
+  createModel: (input: Partial<ModelConfig>) => request<{ model: ModelConfig }>('/api/models', { method: 'POST', body: JSON.stringify(input) }),
+  updateModel: (id: string, input: Partial<ModelConfig>) => request<{ model: ModelConfig }>(`/api/models/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
+  revealModelApiKey: (id: string) => request<{ apiKey: string }>(`/api/models/${id}/api-key`, { method: 'POST' }),
+  deleteModel: (id: string) => request<{ ok: boolean }>(`/api/models/${id}`, { method: 'DELETE' }),
+  activateModel: (id: string) => request<{ ok: boolean }>(`/api/models/${id}/activate`, { method: 'POST' }),
+  activateVisionModel: (id: string) => request<{ ok: boolean }>(`/api/models/${id}/activate-vision`, { method: 'POST' }),
+  testModel: (id: string) => request<{ ok: boolean; latency: number; message: string; code?: string }>(`/api/models/${id}/test`, { method: 'POST' }),
+  testModelConfig: (input: Partial<ModelConfig>) => request<{ ok: boolean; latency: number; message: string; code?: string }>('/api/models/test-config', { method: 'POST', body: JSON.stringify(input) }),
+};
+
+export function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error(tf('api.readImageFailed', '读取图片失败')));
+    reader.readAsDataURL(file);
+  });
+}
+
+// List/thumbnail contexts load a downscaled copy; the canvas keeps the full
+// image. The server falls back to the original file for non-PNG sources.
+export function thumbUrl(image: Pick<ProjectImage, 'url'>, width = 480) {
+  return `${image.url}?w=${width}`;
+}
